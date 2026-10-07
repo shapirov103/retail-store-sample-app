@@ -1,7 +1,7 @@
+# re:Invent demo fork: manual only. Upstream runs on push to main and publishes
+# images to the upstream ECR Public registry, which this fork has no access to.
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: write

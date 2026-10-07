@@ -1,12 +1,9 @@
 name: E2E Test
 
+# re:Invent demo fork: manual only. On push/PR these slow Compose and Kind runs
+# would appear next to the demo pipeline on screen. Upstream triggers were
+# push and pull_request on main.
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions: {}

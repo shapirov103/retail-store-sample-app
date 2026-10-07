@@ -1,0 +1,14 @@
+# OPTIONAL: share Terraform state between speakers through S3.
+# Not needed to run or rehearse the demo; without it state stays on one laptop.
+#
+# 1. Create a bucket:  aws s3 mb s3://<unique-bucket-name> --region us-east-1
+# 2. Copy this file to backend.tf and fill in the bucket name.
+# 3. Run: terraform init -migrate-state
+terraform {
+  backend "s3" {
+    bucket       = "REPLACE-ME"
+    key          = "riv/ecs.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+  }
+}

@@ -1,0 +1,105 @@
+# CD for the catalog service (re:Invent CON340 demo). See RIV.md.
+#
+# Push to main touching src/catalog/** -> build image -> push to ECR -> register a new
+# task definition revision -> update the ECS service -> wait for it to become stable.
+# If the new tasks never pass their health check, the wait times out and the job goes red.
+#
+# One-time setup: run terraform/ecs/riv, then copy its `github_variables` output into
+# Settings > Secrets and variables > Actions > Variables. AWS access uses OIDC; no keys.
+
+name: Deploy catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/catalog/**"
+      - ".github/workflows/deploy-catalog.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-catalog
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    # Skip cleanly until the repository variables exist (for example on a fresh fork).
+    if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    timeout-minutes: 30
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+      ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+      ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: src/catalog/go.mod
+          cache-dependency-path: src/catalog/go.sum
+
+      # The test/ package needs MySQL, so CI runs build and vet only.
+      - name: Build and vet
+        working-directory: src/catalog
+        run: |
+          go build -o /tmp/catalog main.go
+          go list ./... | grep -v /test | xargs go vet
+
+      - name: AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: deploy-catalog-${{ github.run_id }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2.1.7
+
+      - name: Build and push image
+        id: image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA::12}"
+          docker build -t "$IMAGE" src/catalog
+          docker push "$IMAGE"
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # Starts from the latest registered revision in ECS, so health check, env vars and
+      # roles stay as Terraform defined them. Only the image changes.
+      - name: Render task definition
+        id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.9.0
+        with:
+          task-definition-family: ${{ vars.ECS_TASK_FAMILY }}
+          container-name: ${{ vars.ECS_CONTAINER_NAME }}
+          image: ${{ steps.image.outputs.uri }}
+
+      - name: Deploy and wait for stability
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2.6.3
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          service: ${{ vars.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          # Keep stage time short. No circuit breaker is configured, so without this
+          # limit a bad deploy would wait the action's default before failing.
+          wait-for-minutes: ${{ vars.DEPLOY_WAIT_MINUTES || 10 }}
+
+      - name: Recent service events
+        if: failure()
+        run: |
+          aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+            --query 'services[0].events[:10].[createdAt,message]' --output table || true
