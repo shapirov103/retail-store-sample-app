@@ -15,6 +15,12 @@ data "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
+  # GitHub can send either "repo:<owner>/<repo>" or, when the repository uses the immutable
+  # subject claim, "repo:<owner>@<owner-id>/<repo>@<repo-id>". The exact prefix is read from
+  #   gh api repos/<owner>/<repo>/actions/oidc/customization/sub --jq .sub_claim_prefix
+  # and passed in as var.github_subject_prefix. No wildcards: a wildcard would also match other accounts.
+  github_subject_prefix = var.github_subject_prefix != "" ? var.github_subject_prefix : "repo:${var.github_repository}"
+
   github_oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : data.aws_iam_openid_connect_provider.github[0].arn
   catalog_service_arn      = "arn:${data.aws_partition.current.partition}:ecs:${var.region}:${data.aws_caller_identity.current.account_id}:service/${aws_ecs_cluster.this.name}/${module.catalog.ecs_service_name}"
 }
@@ -40,7 +46,7 @@ data "aws_iam_policy_document" "github_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:refs/heads/${var.github_deploy_branch}"]
+      values   = ["${local.github_subject_prefix}:ref:refs/heads/${var.github_deploy_branch}"]
     }
   }
 }
@@ -82,6 +88,14 @@ resource "aws_iam_role_policy" "github_deploy" {
         Effect   = "Allow"
         Action   = ["ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition"]
         Resource = "*"
+      },
+      {
+        # The rendered task definition keeps the tags Terraform set, and registering a
+        # tagged task definition requires TagResource. Limited to the catalog family.
+        Sid      = "TagCatalogTaskDefinitions"
+        Effect   = "Allow"
+        Action   = ["ecs:TagResource"]
+        Resource = "arn:${data.aws_partition.current.partition}:ecs:${var.region}:${data.aws_caller_identity.current.account_id}:task-definition/${module.catalog.task_definition_family}:*"
       },
       {
         Sid      = "DeployCatalogService"

@@ -38,6 +38,18 @@ How GitHub reaches AWS: an OIDC trust, no stored keys. Only workflow runs on the
 repo named in `terraform/ecs/riv/variables.tf` (`github_repository`) can assume the deploy role.
 See `terraform/ecs/riv/github.tf`.
 
+If the deploy job fails at "AWS credentials (OIDC)" with "Not authorized to perform
+sts:AssumeRoleWithWebIdentity", the repository probably uses GitHub's immutable subject claim, where the
+token subject includes numeric owner and repo IDs. Read the exact prefix and pass it to Terraform:
+
+```bash
+echo "github_subject_prefix = \"$(gh api repos/<owner>/<repo>/actions/oidc/customization/sub --jq .sub_claim_prefix)\"" \
+  > terraform/ecs/riv/local.auto.tfvars    # git-ignored
+terraform -chdir=terraform/ecs/riv apply
+```
+
+This fork needed it.
+
 ## Bring in the DevOps Agent
 
 | # | Step | Notes |

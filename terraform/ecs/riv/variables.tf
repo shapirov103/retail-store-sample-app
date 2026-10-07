@@ -28,6 +28,16 @@ variable "github_repository" {
   description = "owner/repo allowed to assume the CD deploy role"
 }
 
+variable "github_subject_prefix" {
+  type        = string
+  default     = ""
+  description = <<-EOT
+    Exact "repo:..." prefix of the GitHub OIDC token subject. Leave empty to use
+    "repo:<github_repository>". Repositories that use GitHub's immutable subject claim need the
+    value from: gh api repos/<owner>/<repo>/actions/oidc/customization/sub --jq .sub_claim_prefix
+  EOT
+}
+
 variable "github_deploy_branch" {
   type        = string
   default     = "main"

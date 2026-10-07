@@ -72,7 +72,8 @@ jobs:
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
-          IMAGE="$REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA::12}"
+          # ECR tags are immutable, so include run number and attempt to allow re-runs.
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA::12}-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
           docker build -t "$IMAGE" src/catalog
           docker push "$IMAGE"
           echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
