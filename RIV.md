@@ -9,16 +9,29 @@ The talk shows AWS DevOps Agent investigating real ECS failures on this app. Ups
 
 **Step-by-step setup and demo commands: [riv/SETUP.md](./riv/SETUP.md).**
 
-## Status (2026-10-02)
+## Status (2026-10-07)
 
 | Item | State |
 | --- | --- |
-| Trimmed Terraform stack, `terraform/ecs/riv/` | Written. `terraform validate` passes and a read-only `terraform plan` showed 68 resources to add. See `riv/SETUP.md` for the current deployment state. |
-| CD workflow, `.github/workflows/deploy-catalog.yml` | Written, passes actionlint. **Never run** (needs the stack and repo variables first). |
+| Trimmed Terraform stack, `terraform/ecs/riv/` | **Deployed** (68 resources, us-east-1). ui, catalog, carts and loadgen all 1/1, rollout COMPLETED. |
+| CD workflow, `.github/workflows/deploy-catalog.yml` | **Green end to end** on a push to `main`: build, push to ECR, new task definition, ECS deploy, wait. About 7 minutes. Catalog now runs the image built by the pipeline. |
 | Noisy upstream workflows | `e2e-test.yml` and `release-please.yml` switched to manual trigger only. |
-| Demo helper script, `riv/demo.sh` | Written, passes shellcheck. Not run against AWS. |
-| UI behavior when catalog fails | **Tested locally** (see below). |
+| Demo helper script, `riv/demo.sh` | `status`, `chaos-on` and `chaos-off` **run against AWS and work**. `break-deploy` and `fix-deploy` **not run yet**. |
+| UI behavior when catalog fails | **Tested in AWS**: `/home` and `/catalog` return 500, `/cart` returns 200, UI health stays UP. |
+| Traces and metrics | X-Ray service map shows ui, carts and catalog. Container Insights metrics present. |
 | DevOps Agent space | Not created. |
+
+Problems found and fixed on the first real run:
+
+- **OIDC subject.** This repo uses GitHub's immutable subject claim, so the token subject carries the
+  numeric owner and repo IDs. Fixed with `github_subject_prefix` (`terraform/ecs/riv/variables.tf`).
+  See `riv/SETUP.md`.
+- **Missing `ecs:TagResource`** on the deploy role, needed to register a tagged task definition. Added,
+  scoped to the catalog task definition family (`github.tf`).
+- **Immutable ECR tags.** Re-running a workflow on the same commit failed at the image push. Tags now
+  include the run number and attempt (`deploy-catalog.yml:76`).
+- **Harmless sidecar noise.** The CloudWatch agent logs EC2 metadata errors on Fargate and falls back.
+  Traces still arrive.
 
 ## The three demos
 
@@ -80,7 +93,7 @@ Two ways to break it, both verified against the code and the second one tested l
 catalog's default port goes from 8080 to 8000 (`src/catalog/config/config.go:21`). The health check
 still calls 8080 (`modules/service/ecs.tf:40`), so every new catalog task is marked unhealthy and
 replaced. The deploy never stabilizes, and the CD job fails after `DEPLOY_WAIT_MINUTES` (default 10,
-`deploy-catalog.yml:99`). *Expected from the config; not yet run in AWS.*
+`deploy-catalog.yml:99`). *Expected from the config; `break-deploy` has not been run in AWS yet.*
 
 **2. Runtime fault (fast, repeatable rehearsal).** `riv/demo.sh chaos-on` makes catalog's API return
 500 while its `/health` keeps returning 200. Nothing in ECS or at the ALB turns red.

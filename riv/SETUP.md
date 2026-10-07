@@ -76,13 +76,18 @@ The ECR repository is force-deleted with its images. The GitHub repository varia
 
 ## Progress log
 
-Update this table as steps complete.
+Last updated 2026-10-07.
 
 | Step | Status |
 | --- | --- |
-| 1 Push | not done |
-| 2 Create stack | not done |
-| 3 GitHub variables | not done |
-| 4 First pipeline run | not done |
-| 5 to 6 Verify | not done |
-| 7 to 8 DevOps Agent | not done |
+| 1 Push | Done |
+| 2 Create stack | Done (68 resources) |
+| 3 GitHub variables | Done |
+| 4 First pipeline run | Done, green (needed two fixes, see RIV.md) |
+| 5 to 6 Verify | Done: services 1/1, store returns 200, load generator running with 0 failures, traces and Container Insights present |
+| Demo 1 `chaos-on` / `chaos-off` | Tested in AWS, works |
+| Demo 1 `break-deploy` / `fix-deploy` | Not run yet |
+| 7 to 8 DevOps Agent | Not started |
+
+Resources that cost money while the stack is up: NAT gateway, load balancer, and five Fargate tasks
+(ui, catalog, carts with sidecars, plus the load generator). Run the teardown step when not rehearsing.
