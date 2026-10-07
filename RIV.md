@@ -19,7 +19,7 @@ The talk shows AWS DevOps Agent investigating real ECS failures on this app. Ups
 | Demo helper script, `riv/demo.sh` | `status`, `chaos-on` and `chaos-off` **run against AWS and work**. `break-deploy` and `fix-deploy` **not run yet**. |
 | UI behavior when catalog fails | **Tested in AWS**: `/home` and `/catalog` return 500, `/cart` returns 200, UI health stays UP. |
 | Traces and metrics | X-Ray service map shows ui, carts and catalog. Container Insights metrics present. |
-| DevOps Agent space | Not created. |
+| DevOps Agent space | **Created** in us-east-1 (`con340-riv-retail`). AWS account associated and valid, web app enabled with IAM sign-in. GitHub not associated yet. No investigation run yet. |
 
 Problems found and fixed on the first real run:
 

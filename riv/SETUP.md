@@ -52,10 +52,33 @@ This fork needed it.
 
 ## Bring in the DevOps Agent
 
+Done from the CLI, following the
+[onboarding guide](https://docs.aws.amazon.com/devopsagent/latest/userguide/getting-started-with-aws-devops-agent-cli-onboarding-guide.html).
+Use `us-east-1` (release management preview runs only there). Use braces around shell variables that
+are followed by a colon (`${ACCT}:agentspace`); in zsh a bare `$ACCT:a` is a path modifier and silently
+corrupts the ARN.
+
+| # | Step | Command | Result |
+| --- | --- | --- | --- |
+| 7a | Agent space role | `aws iam create-role --role-name DevOpsAgentRole-AgentSpace` with trust for `aidevops.amazonaws.com` (conditions: your account, `arn:aws:aidevops:<region>:<acct>:agentspace/*`), then attach `AIDevOpsAgentAccessPolicy` and an inline policy allowing `iam:CreateServiceLinkedRole` for the Resource Explorer role | Role created |
+| 7b | Web app role | Same trust plus `sts:TagSession`, named `DevOpsAgentRole-WebappAdmin`, with `AIDevOpsOperatorAppAccessPolicy` | Role created |
+| 7c | Create the space | `aws devops-agent create-agent-space --name con340-riv-retail --region us-east-1` | Returns `agentSpaceId` |
+| 7d | Associate the account | `aws devops-agent associate-service --agent-space-id <id> --service-id aws --configuration '{"aws":{"assumableRoleArn":"<AgentSpace role arn>","accountId":"<acct>","accountType":"monitor"}}'` | Association status `valid` |
+| 7e | Enable the web app | `aws devops-agent enable-operator-app --agent-space-id <id> --auth-flow iam --operator-app-role-arn <WebappAdmin role arn>` | Returns the web app URL |
+
+Find the space and URL later with `aws devops-agent list-agent-spaces --region us-east-1` and
+`aws devops-agent get-operator-app --agent-space-id <id> --region us-east-1`.
+
+Web app sign-in is IAM (admin access). Sessions last 30 minutes, so relaunch it mid-talk or switch to
+IAM Identity Center, which this account does not have.
+
 | # | Step | Notes |
 | --- | --- | --- |
-| 7 | Create the agent space in us-east-1 | Follow the [CLI onboarding guide](https://docs.aws.amazon.com/devopsagent/latest/userguide/getting-started-with-aws-devops-agent-cli-onboarding-guide.html): two IAM roles, create the space, associate the account, enable the web app. Web app sign-in is either IAM Identity Center or admin access (IAM, 30-minute sessions). |
-| 8 | Associate the GitHub repo | Lets the agent read the code. Needed for the fix-PR flow in demo 3. |
+| 8 | Register GitHub and associate the repo | **Console only.** Register GitHub in the DevOps Agent console (Capabilities > Pipeline), then run `aws devops-agent list-services` to get the GitHub service id and `aws devops-agent associate-service` with a `github` configuration (`repoName`, `repoId`, `owner`, `ownerType`). Needed for the fix-PR flow in demo 3, not for demo 1. |
+
+Usage is metered in hours (investigation, evaluation, system learning, on demand), with no limit set
+(`aws devops-agent get-account-usage`). No per-hour price was found. Check the billing console after
+the first investigations.
 
 ## Run Demo 1
 
@@ -87,7 +110,9 @@ Last updated 2026-10-07.
 | 5 to 6 Verify | Done: services 1/1, store returns 200, load generator running with 0 failures, traces and Container Insights present |
 | Demo 1 `chaos-on` / `chaos-off` | Tested in AWS, works |
 | Demo 1 `break-deploy` / `fix-deploy` | Not run yet |
-| 7 to 8 DevOps Agent | Not started |
+| 7 DevOps Agent space | Done: roles, space, account association `valid`, web app enabled (IAM sign-in) |
+| 8 GitHub association | Not done (console registration needed) |
+| First investigation | Not started |
 
 Resources that cost money while the stack is up: NAT gateway, load balancer, and five Fargate tasks
 (ui, catalog, carts with sidecars, plus the load generator). Run the teardown step when not rehearsing.
