@@ -145,7 +145,19 @@ To get the quiet variant back, set both back to the defaults (100 and 200).
 | `riv/demo.sh` | Demo helper commands. |
 | `.gitignore` | Ignores `terraform/ecs/riv/backend.tf` (optional shared-state config). |
 
-Not configured on purpose: the ECS deployment circuit breaker. Turning it on is the "prevent" step.
+Deployment circuit breaker on catalog: **on, rollback off** (`services.tf`, variables in
+`modules/service/variables.tf`, applied in `modules/service/ecs.tf`). Without a breaker, ECS never marks a stuck
+deployment as failed: the service shows "0 of 1 tasks", the deployment stays IN_PROGRESS, and ECS keeps
+launching and stopping tasks forever (we saw 6 failed tasks in 25 minutes and nothing turned red). With the
+breaker on, ECS counts failed tasks and, after 3 for a one-task service (the minimum threshold), marks the
+deployment FAILED and stops retrying. Rollback off leaves the broken revision in place and the store down.
+
+The "prevent" step is flipping `deployment_circuit_breaker_rollback` to `true`. Then, when the breaker trips,
+ECS rolls back to the last deployment in COMPLETED state, which here is revision 2 (the AWS docs say rollback
+requires a previous COMPLETED deployment). That is the answer to "can ECS recover by itself": yes, with
+rollback on it restores the previous revision; without it the breaker only stops the churn. To change it on
+a live, already-failing service, use `aws ecs update-service --deployment-configuration` rather than
+`terraform apply`, because the provider waits for the service to become stable and would hang.
 
 ## CI/CD
 

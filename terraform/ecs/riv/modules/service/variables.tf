@@ -99,3 +99,15 @@ variable "deployment_maximum_percent" {
   default     = 200
   description = "ECS default is 200. With 1 task and a value of 100, the old task must stop before a new one starts."
 }
+
+variable "deployment_circuit_breaker_enabled" {
+  type        = bool
+  default     = false
+  description = "ECS deployment circuit breaker. When a deployment keeps failing, ECS marks it FAILED and stops retrying."
+}
+
+variable "deployment_circuit_breaker_rollback" {
+  type        = bool
+  default     = false
+  description = "When the circuit breaker trips, roll back to the last COMPLETED deployment. Needs deployment_circuit_breaker_enabled."
+}

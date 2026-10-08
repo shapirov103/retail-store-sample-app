@@ -111,6 +111,11 @@ resource "aws_ecs_service" "this" {
   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
   deployment_maximum_percent         = var.deployment_maximum_percent
 
+  deployment_circuit_breaker {
+    enable   = var.deployment_circuit_breaker_enabled
+    rollback = var.deployment_circuit_breaker_rollback
+  }
+
   network_configuration {
     security_groups  = [aws_security_group.this.id]
     subnets          = var.subnet_ids
@@ -155,6 +160,11 @@ resource "aws_ecs_service" "ci_managed" {
 
   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
   deployment_maximum_percent         = var.deployment_maximum_percent
+
+  deployment_circuit_breaker {
+    enable   = var.deployment_circuit_breaker_enabled
+    rollback = var.deployment_circuit_breaker_rollback
+  }
 
   network_configuration {
     security_groups  = [aws_security_group.this.id]

@@ -27,6 +27,12 @@ module "catalog" {
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
 
+  # Circuit breaker on, rollback off: after 3 failed tasks ECS marks the deployment FAILED and stops
+  # retrying, but leaves the broken revision in place. Setting rollback = true is the "prevent" step:
+  # ECS then restores the last COMPLETED deployment on its own.
+  deployment_circuit_breaker_enabled  = true
+  deployment_circuit_breaker_rollback = false
+
   environment_variables = {
     RETAIL_CATALOG_PERSISTENCE_PROVIDER = "in-memory"
     RETAIL_CATALOG_SEARCH_ENABLED       = "false"
