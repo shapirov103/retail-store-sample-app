@@ -18,7 +18,7 @@ package config
 
 // Configuration exported
 type AppConfiguration struct {
-	Port       int `env:"PORT,default=8000"`
+	Port       int `env:"PORT,default=8080"`
 	Database   DatabaseConfiguration
 	OpenSearch OpenSearchConfiguration
 }
