@@ -80,6 +80,19 @@ Usage is metered in hours (investigation, evaluation, system learning, on demand
 (`aws devops-agent get-account-usage`). No per-hour price was found. Check the billing console after
 the first investigations.
 
+## Before every demo run
+
+```bash
+export AWS_PROFILE="<demo-account-profile>" AWS_DEFAULT_REGION=us-east-1
+riv/demo.sh preflight
+```
+
+Read-only, and it does not use ECS Exec, so it adds nothing for the agent to find in CloudTrail. It checks the
+four ECS services, catalog's deployment settings (the break-deploy demo expects max 100, min 0, circuit
+breaker on, rollback off), the three store pages and their latency, how long the load generator's current
+hour has left, and that git is on a clean, up-to-date `main` with catalog's default port at 8080. All lines
+should be PASS. A WARN about the load generator means traffic will pause briefly when its hour ends.
+
 ## Run Demo 1
 
 | Scenario | Command | What you see | Undo |
