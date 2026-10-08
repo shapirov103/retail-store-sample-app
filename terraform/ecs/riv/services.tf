@@ -21,6 +21,12 @@ module "catalog" {
   healthcheck_path = "/health"
   ci_managed       = true
 
+  # Demo setting: replace the single catalog task in place (old task stops first). A bad deploy
+  # then takes catalog down and users see errors, instead of the old task quietly staying up.
+  # ECS defaults (min 100, max 200) would hide the failed deployment from users.
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
   environment_variables = {
     RETAIL_CATALOG_PERSISTENCE_PROVIDER = "in-memory"
     RETAIL_CATALOG_SEARCH_ENABLED       = "false"

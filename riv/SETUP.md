@@ -85,7 +85,7 @@ the first investigations.
 | Scenario | Command | What you see | Undo |
 | --- | --- | --- | --- |
 | Errors while everything is green | `riv/demo.sh chaos-on` | Catalog pages return 500; ECS and the load balancer stay healthy; pipeline stays green. | `riv/demo.sh chaos-off` |
-| Failed deployment | `riv/demo.sh break-deploy` | Store keeps working. New catalog tasks fail their health check; the Actions job turns red after about 10 minutes. | `riv/demo.sh fix-deploy` |
+| Failed deployment | `riv/demo.sh break-deploy` | New catalog tasks fail their health check. Catalog is set to stop the old task first, so `/home` and `/catalog` return 500 while `/cart` works. The Actions job turns red after about 10 minutes. | `riv/demo.sh fix-deploy` |
 
 Then start an investigation in the DevOps Agent web app and let it find catalog.
 
@@ -109,7 +109,8 @@ Last updated 2026-10-07.
 | 4 First pipeline run | Done, green (needed two fixes, see RIV.md) |
 | 5 to 6 Verify | Done: services 1/1, store returns 200, load generator running with 0 failures, traces and Container Insights present |
 | Demo 1 `chaos-on` / `chaos-off` | Tested in AWS, works |
-| Demo 1 `break-deploy` / `fix-deploy` | Not run yet |
+| Demo 1 `break-deploy` | Run 2026-10-08: pipeline red, health checks failing, store errors (after the deployment setting change) |
+| Demo 1 `fix-deploy` | Not run yet |
 | 7 DevOps Agent space | Done: roles, space, account association `valid`, web app enabled (IAM sign-in) |
 | 8 GitHub association | Not done (console registration needed) |
 | First investigation | Not started |

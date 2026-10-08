@@ -87,3 +87,15 @@ variable "ci_managed" {
     are not rolled back by a later terraform apply.
   EOT
 }
+
+variable "deployment_minimum_healthy_percent" {
+  type        = number
+  default     = 100
+  description = "ECS default is 100: the old task keeps serving until the new one is healthy. 0 stops the old task first."
+}
+
+variable "deployment_maximum_percent" {
+  type        = number
+  default     = 200
+  description = "ECS default is 200. With 1 task and a value of 100, the old task must stop before a new one starts."
+}

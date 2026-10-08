@@ -108,6 +108,9 @@ resource "aws_ecs_service" "this" {
   enable_execute_command = true
   wait_for_steady_state  = true
 
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  deployment_maximum_percent         = var.deployment_maximum_percent
+
   network_configuration {
     security_groups  = [aws_security_group.this.id]
     subnets          = var.subnet_ids
@@ -149,6 +152,9 @@ resource "aws_ecs_service" "ci_managed" {
   launch_type            = "FARGATE"
   enable_execute_command = true
   wait_for_steady_state  = true
+
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  deployment_maximum_percent         = var.deployment_maximum_percent
 
   network_configuration {
     security_groups  = [aws_security_group.this.id]

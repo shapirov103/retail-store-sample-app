@@ -16,7 +16,7 @@ The talk shows AWS DevOps Agent investigating real ECS failures on this app. Ups
 | Trimmed Terraform stack, `terraform/ecs/riv/` | **Deployed** (68 resources, us-east-1). ui, catalog, carts and loadgen all 1/1, rollout COMPLETED. |
 | CD workflow, `.github/workflows/deploy-catalog.yml` | **Green end to end** on a push to `main`: build, push to ECR, new task definition, ECS deploy, wait. About 7 minutes. Catalog now runs the image built by the pipeline. |
 | Noisy upstream workflows | `e2e-test.yml` and `release-please.yml` switched to manual trigger only. |
-| Demo helper script, `riv/demo.sh` | `status`, `chaos-on` and `chaos-off` **run against AWS and work**. `break-deploy` and `fix-deploy` **not run yet**. |
+| Demo helper script, `riv/demo.sh` | `status`, `chaos-on` and `chaos-off` **run against AWS and work**. `break-deploy` **run against AWS** (pipeline red, failed health checks). `fix-deploy` not run yet. |
 | UI behavior when catalog fails | **Tested in AWS**: `/home` and `/catalog` return 500, `/cart` returns 200, UI health stays UP. |
 | Traces and metrics | X-Ray service map shows ui, carts and catalog. Container Insights metrics present. |
 | DevOps Agent space | **Created** in us-east-1 (`con340-riv-retail`). AWS account associated and valid, web app enabled with IAM sign-in. GitHub not associated yet. No investigation run yet. |
@@ -93,7 +93,7 @@ Two ways to break it, both verified against the code and the second one tested l
 catalog's default port goes from 8080 to 8000 (`src/catalog/config/config.go:21`). The health check
 still calls 8080 (`modules/service/ecs.tf:40`), so every new catalog task is marked unhealthy and
 replaced. The deploy never stabilizes, and the CD job fails after `DEPLOY_WAIT_MINUTES` (default 10,
-`deploy-catalog.yml:99`). *Expected from the config; `break-deploy` has not been run in AWS yet.*
+`deploy-catalog.yml:99`). *Confirmed in AWS on 2026-10-08.*
 
 **2. Runtime fault (fast, repeatable rehearsal).** `riv/demo.sh chaos-on` makes catalog's API return
 500 while its `/health` keeps returning 200. Nothing in ECS or at the ALB turns red.
@@ -116,16 +116,18 @@ green. That is the story for demo 1: "all green, users get errors, and the cause
 The UI calls catalog without error handling (`KiotaCatalogService.java:43`). If you want a page that
 renders without products instead, that is a small Java change plus a UI image build; not done.
 
-**The bad deploy does not break the store.** The riv Terraform sets no deployment limits, so ECS uses
-its defaults (100% minimum healthy, 200% maximum; stated from general ECS knowledge, not tested
-here). The old catalog task keeps serving while the new one fails its health check and gets replaced
-over and over. Users see a working store. What goes red is the deployment: the CD job, the service
-events, and the stopped-task reasons. An earlier version of this file said the store would error in
-this case; that was wrong. So the two faults tell different stories:
+**Deployment settings decide whether users see a bad deploy.** With ECS defaults (100% minimum healthy,
+200% maximum) the old catalog task keeps serving while the new one fails its health check, so the
+store stays up and only the deployment goes red. We tested that on 2026-10-08: with the defaults,
+`/catalog` returned 200 throughout and the Actions job failed. That leaves an operator with nothing
+visible to report. So catalog is configured to replace its single task in place: 0% minimum healthy and
+100% maximum (`services.tf`, `modules/service/variables.tf`). The old task stops first, so a bad deploy
+takes catalog down and the store returns errors. This is a common setting for small dev services.
+To get the quiet variant back, set both back to the defaults (100 and 200).
 
 | Fault | Users | ECS and ALB health | Pipeline | Agent has to find |
 | --- | --- | --- | --- | --- |
-| `break-deploy` | store works | new tasks keep failing, deployment never completes | red | why the new catalog tasks are unhealthy (port 8000 vs health check on 8080) |
+| `break-deploy` | `/home` and `/catalog` return 500 once the old task stops, `/cart` works | new catalog tasks keep failing health checks, deployment never completes | red | why the new catalog tasks are unhealthy (port 8000 vs health check on 8080) |
 | `chaos-on` | catalog pages return 500 | all green | green | that catalog is the source of UI errors |
 
 ## What changed versus upstream
