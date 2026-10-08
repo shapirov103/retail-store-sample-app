@@ -1,6 +1,6 @@
 # CON340 setup and demo steps
 
-Everything to get from a fresh clone to a running demo, in order. Steps 1 to 6 build and verify the
+Everything to get from a fresh clone to a running demo, in order. The demo run itself is in [PLAYBOOK.md](./PLAYBOOK.md). Steps 1 to 6 build and verify the
 app and pipeline. Steps 7 and 8 bring in the DevOps Agent. Background and topology are in
 [RIV.md](../RIV.md).
 
@@ -125,8 +125,8 @@ Last updated 2026-10-07.
 | Demo 1 `break-deploy` | Run 2026-10-08: pipeline red, health checks failing, store errors (after the deployment setting change) |
 | Demo 1 `fix-deploy` | Not run yet |
 | 7 DevOps Agent space | Done: roles, space, account association `valid`, web app enabled (IAM sign-in) |
-| 8 GitHub association | Not done (console registration needed) |
-| First investigation | Not started |
+| 8 GitHub association | Done: GitHub app registered with read and write access, repo associated with the space |
+| Investigations | Two run (fault injection; bad deploy without GitHub). Bad deploy with GitHub connected not yet run. |
 
 Resources that cost money while the stack is up: NAT gateway, load balancer, and five Fargate tasks
 (ui, catalog, carts with sidecars, plus the load generator). Run the teardown step when not rehearsing.

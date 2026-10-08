@@ -7,7 +7,7 @@ is the demo environment for CON340, *Troubleshooting and Recovering Failed Amazo
 The talk shows AWS DevOps Agent investigating real ECS failures on this app. Upstream docs are in
 [README.md](./README.md). This file covers only what is different for the talk.
 
-**Step-by-step setup and demo commands: [riv/SETUP.md](./riv/SETUP.md).**
+**Step-by-step setup: [riv/SETUP.md](./riv/SETUP.md). Running the demo with `riv/demo.sh`: [riv/PLAYBOOK.md](./riv/PLAYBOOK.md).**
 
 ## Status (2026-10-07)
 
@@ -19,7 +19,7 @@ The talk shows AWS DevOps Agent investigating real ECS failures on this app. Ups
 | Demo helper script, `riv/demo.sh` | `status`, `chaos-on` and `chaos-off` **run against AWS and work**. `break-deploy` **run against AWS** (pipeline red, failed health checks). `fix-deploy` not run yet. |
 | UI behavior when catalog fails | **Tested in AWS**: `/home` and `/catalog` return 500, `/cart` returns 200, UI health stays UP. |
 | Traces and metrics | X-Ray service map shows ui, carts and catalog. Container Insights metrics present. |
-| DevOps Agent space | **Created** in us-east-1 (`con340-riv-retail`). AWS account associated and valid, web app enabled with IAM sign-in. GitHub not associated yet. No investigation run yet. |
+| DevOps Agent space | **Created** in us-east-1 (`con340-riv-retail`). AWS account associated and valid, web app enabled with IAM sign-in. GitHub registered and the repo associated. Two investigations run so far (a fault-injection one and a bad-deploy one without GitHub connected). |
 
 Problems found and fixed on the first real run:
 
@@ -225,7 +225,7 @@ Teardown: `terraform destroy`. The ECR repo is force-deleted with its images.
 | When | Command | Effect |
 | --- | --- | --- |
 | Before the talk | `riv/demo.sh status` | All three services 1/1, rollout COMPLETED |
-| Start of talk or during the concepts slides | `riv/demo.sh break-deploy` | Pushes the bad port commit; CD job goes red about 10 minutes later |
+| Start of talk or during the concepts slides | `riv/demo.sh break-deploy` | Pushes the bad port commit; the store breaks at about 3.5 min and the CD job goes red at about 12 to 13 min (see riv/PLAYBOOK.md) |
 | Rehearsing demo 1 without a deploy | `riv/demo.sh chaos-on` / `chaos-off` | Instant catalog 500s with green health checks |
 | After demo 3 merge, or to reset | `riv/demo.sh fix-deploy` | Reverts the bad commit; CD redeploys the good image |
 
